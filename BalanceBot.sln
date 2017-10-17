@@ -3,7 +3,42 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Robot", "Robot\Robot.vcxproj", "{C5F80730-F44F-4478-BDAE-6634EFC2CA88}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Remote", "Remote\Remote.vcxproj", "{73953659-8875-4037-93F2-6A89D353C73A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HWTest", "HWTest\HWTest.vcxproj", "{FA77189A-88F5-42CB-AE19-EE4A8C878F35}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{926099E5-A2F6-4093-AC13-FB5476D17D62}"
+	ProjectSection(SolutionItems) = preProject
+		Docs\Balancing_robot.ino = Docs\Balancing_robot.ino
+		Docs\Balancing_robot_remote.ino = Docs\Balancing_robot_remote.ino
+		Docs\ReadMe.txt = Docs\ReadMe.txt
+		Docs\yabr-frame_parts.pdf = Docs\yabr-frame_parts.pdf
+		Docs\yabr-schematic_remote.pdf = Docs\yabr-schematic_remote.pdf
+		Docs\yabr-schematic_robot.pdf = Docs\yabr-schematic_robot.pdf
+		Docs\YABR_hardware_test.ino = Docs\YABR_hardware_test.ino
+	EndProjectSection
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.ActiveCfg = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Debug|x86.Build.0 = Debug|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.ActiveCfg = Release|Win32
+		{C5F80730-F44F-4478-BDAE-6634EFC2CA88}.Release|x86.Build.0 = Release|Win32
+		{73953659-8875-4037-93F2-6A89D353C73A}.Debug|x86.ActiveCfg = Debug|Win32
+		{73953659-8875-4037-93F2-6A89D353C73A}.Debug|x86.Build.0 = Debug|Win32
+		{73953659-8875-4037-93F2-6A89D353C73A}.Release|x86.ActiveCfg = Release|Win32
+		{73953659-8875-4037-93F2-6A89D353C73A}.Release|x86.Build.0 = Release|Win32
+		{FA77189A-88F5-42CB-AE19-EE4A8C878F35}.Debug|x86.ActiveCfg = Debug|Win32
+		{FA77189A-88F5-42CB-AE19-EE4A8C878F35}.Debug|x86.Build.0 = Debug|Win32
+		{FA77189A-88F5-42CB-AE19-EE4A8C878F35}.Release|x86.ActiveCfg = Release|Win32
+		{FA77189A-88F5-42CB-AE19-EE4A8C878F35}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
