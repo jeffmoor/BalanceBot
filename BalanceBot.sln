@@ -13,11 +13,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{926099E5-A
 	ProjectSection(SolutionItems) = preProject
 		Docs\Balancing_robot.ino = Docs\Balancing_robot.ino
 		Docs\Balancing_robot_remote.ino = Docs\Balancing_robot_remote.ino
-		Docs\ReadMe.txt = Docs\ReadMe.txt
 		Docs\yabr-frame_parts.pdf = Docs\yabr-frame_parts.pdf
 		Docs\yabr-schematic_remote.pdf = Docs\yabr-schematic_remote.pdf
 		Docs\yabr-schematic_robot.pdf = Docs\yabr-schematic_robot.pdf
 		Docs\YABR_hardware_test.ino = Docs\YABR_hardware_test.ino
+		Docs\YABR_ReadMe.txt = Docs\YABR_ReadMe.txt
 	EndProjectSection
 EndProject
 Global
