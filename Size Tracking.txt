@@ -1,0 +1,17 @@
+
+
+Program HWTest size: 5,656 bytes (used 18% of a 32,256 byte maximum) (5.32 secs)
+Minimum Memory Usage: 996 bytes (49% of a 2048 byte maximum)
+
+// Added switch in I2C device detect with default (default caused the increase)
+Program HWTest size: 5,682 bytes (used 18% of a 32,256 byte maximum) (5.47 secs)
+Minimum Memory Usage: 1012 bytes (49% of a 2048 byte maximum)
+
+Program HWTest size: 5,672 bytes (used 18% of a 32,256 byte maximum) (5.79 secs)
+Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
+
+
+
+
+
+

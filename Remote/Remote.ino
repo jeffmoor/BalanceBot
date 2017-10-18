@@ -9,7 +9,9 @@
 //OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //THE SOFTWARE.
 ///////////////////////////////////////////////////////////////////////////////////////
-#include <Wire.h>                                                   //Include the Wire.h library so we can communicate with the Nunchuck
+#include <Wire.h>	//Include the Wire.h library so we can communicate with the Nunchuck
+#include "BalanceBot.h"
+
 
 int nunchuk_address = 0x52;                                         //Nunchuk I2C address (0x52)
 byte received_data[6], send_byte;                                   //Declare some global byte variables

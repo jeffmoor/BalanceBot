@@ -13,11 +13,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{926099E5-A
 	ProjectSection(SolutionItems) = preProject
 		Docs\Balancing_robot.ino = Docs\Balancing_robot.ino
 		Docs\Balancing_robot_remote.ino = Docs\Balancing_robot_remote.ino
+		Docs\nunchuk.pdf = Docs\nunchuk.pdf
+		Size Tracking.txt = Size Tracking.txt
 		Docs\yabr-frame_parts.pdf = Docs\yabr-frame_parts.pdf
 		Docs\yabr-schematic_remote.pdf = Docs\yabr-schematic_remote.pdf
 		Docs\yabr-schematic_robot.pdf = Docs\yabr-schematic_robot.pdf
 		Docs\YABR_hardware_test.ino = Docs\YABR_hardware_test.ino
 		Docs\YABR_ReadMe.txt = Docs\YABR_ReadMe.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EAB59AFD-33F7-4DCE-A1AA-7A5E3CA8AC46}"
+	ProjectSection(SolutionItems) = preProject
+		BalanceBot.h = BalanceBot.h
 	EndProjectSection
 EndProject
 Global
