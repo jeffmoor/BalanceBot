@@ -87,6 +87,9 @@
     <ClInclude Include="..\BalanceBot.h" />
     <ClInclude Include="__vm\.HWTest.vsarduino.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\BalanceBot.cpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

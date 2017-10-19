@@ -24,6 +24,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{926099E5-A
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EAB59AFD-33F7-4DCE-A1AA-7A5E3CA8AC46}"
 	ProjectSection(SolutionItems) = preProject
+		BalanceBot.cpp = BalanceBot.cpp
 		BalanceBot.h = BalanceBot.h
 	EndProjectSection
 EndProject

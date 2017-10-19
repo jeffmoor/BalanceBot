@@ -1,5 +1,5 @@
 
-
+** HW_TEST
 Program HWTest size: 5,656 bytes (used 18% of a 32,256 byte maximum) (5.32 secs)
 Minimum Memory Usage: 996 bytes (49% of a 2048 byte maximum)
 
@@ -9,6 +9,32 @@ Minimum Memory Usage: 1012 bytes (49% of a 2048 byte maximum)
 
 Program HWTest size: 5,672 bytes (used 18% of a 32,256 byte maximum) (5.79 secs)
 Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
+
+// Added BalanceBot.cpp and i2cRegisterWrite
+Program HWTest size: 5,656 bytes (used 18% of a 32,256 byte maximum) (1.20 secs)
+Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
+
+// Used i2cRegisterWrite everywhere
+Program HWTest size: 5,720 bytes (used 18% of a 32,256 byte maximum) (4.94 secs)
+Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
+
+// Added i2cRegisterReadStart
+Program HWTest size: 5,642 bytes (used 17% of a 32,256 byte maximum) (5.62 secs)
+Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
+
+
+** ROBOT
+// First build with defines in place
+Program Robot size: 8,884 bytes (used 28% of a 32,256 byte maximum) (1.85 secs)
+Minimum Memory Usage: 475 bytes (23% of a 2048 byte maximum)
+
+// Removed global int receive_counter
+Program Robot size: 8,748 bytes (used 27% of a 32,256 byte maximum) (1.02 secs)
+Minimum Memory Usage: 473 bytes (23% of a 2048 byte maximum)
+
+// Swapped in BalanceBot.cpp functions
+Program Robot size: 8,718 bytes (used 27% of a 32,256 byte maximum) (0.89 secs)
+Minimum Memory Usage: 473 bytes (23% of a 2048 byte maximum)
 
 
 

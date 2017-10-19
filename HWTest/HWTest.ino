@@ -29,7 +29,7 @@ void loop()
 	Serial.println("Scanning I2C bus...");
 
 	nDevices = 0;
-	for (iAddrI2C = 1; iAddrI2C < I2C_ADDRESS_MAX; iAddrI2C++)		// Scan all I2C addresses
+	for (iAddrI2C = 1; iAddrI2C < I2C_ADDRESS_MAX; iAddrI2C++)		// Scan all 7-bit I2C addresses
 	{
 		Wire.beginTransmission(iAddrI2C);
 		error = Wire.endTransmission();
@@ -47,25 +47,17 @@ void loop()
 			switch (iAddrI2C)
 			{
 				case I2C_ADDR_NUNCHUCK:
-					// Black nunchuck: 0xF0, 0x55 & 0xFB, 0x00  (Note: White is only one init pair: 0x40, 0x00)
+					// Black nunchuck, two init registers: 0xF0, 0x55 & 0xFB, 0x00  (Note: White is only one register init pair: 0x40, 0x00)
 					Serial.println("This could be a black nunchuck. Attempting initialization.");
-					Wire.beginTransmission(I2C_ADDR_NUNCHUCK);
-					Wire.write(0xF0);
-					Wire.write(0x55);
-					Wire.endTransmission();
+					i2cRegisterWrite1(I2C_ADDR_NUNCHUCK, I2C_ADDR_NUNCHUCK_BLK_REG1_ADDR, I2C_ADDR_NUNCHUCK_BLK_REG1_DATA);
 					delay(20);
-					Wire.beginTransmission(I2C_ADDR_NUNCHUCK);
-					Wire.write(0xFB);
-					Wire.write(0x00);
-					Wire.endTransmission();
+					i2cRegisterWrite1(I2C_ADDR_NUNCHUCK, I2C_ADDR_NUNCHUCK_BLK_REG2_ADDR, I2C_ADDR_NUNCHUCK_BLK_REG2_DATA);
 					delay(20);
 					
 					Serial.println("Sending joystick data request...");
-					Wire.beginTransmission(I2C_ADDR_NUNCHUCK);
-					Wire.write(0x00);
-					Wire.endTransmission();
+
+					i2cRegisterReadStart(I2C_ADDR_NUNCHUCK, 0x00, 1);
 					
-					Wire.requestFrom(I2C_ADDR_NUNCHUCK, 1);
 					while (Wire.available() < 1);
 					lowByte = Wire.read();
 					if (lowByte > 100 && lowByte < 160) {
@@ -82,11 +74,11 @@ void loop()
 				case I2C_ADDR_MPU6050_1:
 				case I2C_ADDR_MPU6050_2:
 					Serial.println("This could be a MPU-6050");
-					Wire.beginTransmission(iAddrI2C);
-					Wire.write(0x75);
-					Wire.endTransmission();
+
+					i2cRegisterReadStart(iAddrI2C, MPU6050_REG_ID, 1);
+
 					Serial.println("Send Who am I request...");
-					Wire.requestFrom(iAddrI2C, 1);
+
 					while (Wire.available() < 1);
 					lowByte = Wire.read();
 					
@@ -108,7 +100,6 @@ void loop()
 				default:
 					Serial.println("Unknown device.");
 					break;
-
 			}
 		}
 		else if (error == I2C_XMIT_END_OTHER_ERROR)
@@ -119,24 +110,24 @@ void loop()
 			Serial.println(iAddrI2C, HEX);
 		}
 	}
+	
 	if (nDevices == 0)
 		Serial.println("No I2C devices found\n");
 	else
 		Serial.println("done\n");
+	
 	if (MPU_6050_found) {
 		Serial.print("Balance value: ");
-		Wire.beginTransmission(I2C_ADDR_MPU6050_1);
-		Wire.write(0x3F);
-		Wire.endTransmission();
-		Wire.requestFrom(I2C_ADDR_MPU6050_1, 2);
+
+		i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_BALANCE_VALUE, 2);
+
 		Serial.println((Wire.read() << 8 | Wire.read())*-1);
 		delay(20);
 		Serial.println("Printing raw gyro values");
 		for (iAddrI2C = 0; iAddrI2C < 20; iAddrI2C++) {
-			Wire.beginTransmission(I2C_ADDR_MPU6050_1);
-			Wire.write(0x43);
-			Wire.endTransmission();
-			Wire.requestFrom(I2C_ADDR_MPU6050_1, 6);
+
+			i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_RAW_GYRO_VALUES, 6);
+			
 			while (Wire.available() < 6);
 			Serial.print("Gyro X = ");
 			Serial.print(Wire.read() << 8 | Wire.read());
@@ -152,10 +143,9 @@ void loop()
 	if (nunchuck_found) {
 		Serial.println("Printing raw Nunchuck values");
 		for (iAddrI2C = 0; iAddrI2C < 20; iAddrI2C++) {
-			Wire.beginTransmission(0x52);
-			Wire.write(0x00);
-			Wire.endTransmission();
-			Wire.requestFrom(0x52, 2);
+
+			i2cRegisterReadStart(I2C_ADDR_NUNCHUCK, NUNCHUCK_REG_XY_VALUES, 2);
+
 			while (Wire.available() < 2);
 			Serial.print("Joystick X = ");
 			Serial.print(Wire.read());
@@ -170,25 +160,10 @@ void loop()
 
 void set_gyro_registers() {
 	//Setup the MPU-6050
-	Wire.beginTransmission(I2C_ADDR_MPU6050_1);                                     //Start communication with the address found during search.
-	Wire.write(0x6B);                                                         //We want to write to the PWR_MGMT_1 register (6B hex)
-	Wire.write(0x00);                                                         //Set the register bits as 00000000 to activate the gyro
-	Wire.endTransmission();                                                   //End the transmission with the gyro.
-
-	Wire.beginTransmission(I2C_ADDR_MPU6050_1);                                     //Start communication with the address found during search.
-	Wire.write(0x1B);                                                         //We want to write to the GYRO_CONFIG register (1B hex)
-	Wire.write(0x00);                                                         //Set the register bits as 00000000 (250dps full scale)
-	Wire.endTransmission();                                                   //End the transmission with the gyro
-
-	Wire.beginTransmission(I2C_ADDR_MPU6050_1);                                     //Start communication with the address found during search.
-	Wire.write(0x1C);                                                         //We want to write to the ACCEL_CONFIG register (1A hex)
-	Wire.write(0x08);                                                         //Set the register bits as 00001000 (+/- 4g full scale range)
-	Wire.endTransmission();                                                   //End the transmission with the gyro
-
-	Wire.beginTransmission(I2C_ADDR_MPU6050_1);                                     //Start communication with the address found during search
-	Wire.write(0x1A);                                                         //We want to write to the CONFIG register (1A hex)
-	Wire.write(0x03);                                                         //Set the register bits as 00000011 (Set Digital Low Pass Filter to ~43Hz)
-	Wire.endTransmission();                                                   //End the transmission with the gyro 
+	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_PWR_MGMT_1, MPU6050_REG_PWR_MGMT_1_ACTIVATE_GYRO);
+	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_GYRO_CONFIG, MPU6050_REG_GYRO_CONFIG_250DPS_FULL_SCALE);
+	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_ACCEL_CONFIG, MPU6050_REG_ACCEL_CONFIG_4G_FULL_SCALE);
+	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_CONFIG, MPU6050_REG_CONFIG_LOW_PASS_43HZ);
 }
 
 
