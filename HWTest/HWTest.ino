@@ -29,12 +29,12 @@ void loop()
 	Serial.println("Scanning I2C bus...");
 
 	nDevices = 0;
-	for (iAddrI2C = 1; iAddrI2C < I2C_ADDRESS_MAX; iAddrI2C++)		// Scan all 7-bit I2C addresses
+	for (iAddrI2C = 1; iAddrI2C < I2C_ADDRESS_MAX; iAddrI2C++)	// Scan all 7-bit I2C addresses
 	{
 		Wire.beginTransmission(iAddrI2C);
 		error = Wire.endTransmission();
 
-		if (error == I2C_XMIT_END_SUCCESS)											// Device found
+		if (error == I2C_XMIT_END_SUCCESS)						// Device found
 		{
 			nDevices++;											// Increment total number found
 
@@ -73,11 +73,10 @@ void loop()
 
 				case I2C_ADDR_MPU6050_1:
 				case I2C_ADDR_MPU6050_2:
-					Serial.println("This could be a MPU-6050");
+					Serial.println("This could be a MPU-6050 Accel/Gyro");
 
-					i2cRegisterReadStart(iAddrI2C, MPU6050_REG_ID, 1);
-
-					Serial.println("Send Who am I request...");
+					Serial.println("Sending 'Who Am I' request...");
+					i2cRegisterReadStart(iAddrI2C, MPU6050_REG_WHO_AM_I, 1);
 
 					while (Wire.available() < 1);
 					lowByte = Wire.read();
@@ -88,7 +87,8 @@ void loop()
 					}
 					else {
 						Serial.print("Wrong Who Am I responce: 0x");
-						if (lowByte<16)Serial.print("0");
+						if (lowByte<16)
+							Serial.print("0");
 						Serial.println(lowByte, HEX);
 					}
 					if (lowByte == I2C_ADDR_MPU6050_1 && iAddrI2C == I2C_ADDR_MPU6050_1) {
@@ -109,13 +109,12 @@ void loop()
 				Serial.print("0");
 			Serial.println(iAddrI2C, HEX);
 		}
-	}
+	}		// Scan all addresses
 	
+	Serial.println("Done.\n");
 	if (nDevices == 0)
-		Serial.println("No I2C devices found\n");
-	else
-		Serial.println("done\n");
-	
+		Serial.println("No I2C devices found.\n");
+		
 	if (MPU_6050_found) {
 		Serial.print("Balance value: ");
 
@@ -155,6 +154,7 @@ void loop()
 		}
 	}
 	else Serial.println("No Nunchuck device found at address 0x52");
+
 	while (1);
 }
 

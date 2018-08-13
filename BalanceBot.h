@@ -5,6 +5,9 @@
 
 	Note: This project assumes the robot code runs on a 16MHz, ATmega328.
 */
+#define		FALSE						0
+#define		TRUE						1
+
 
 #define		I2C_CLOCK_FREQ_400KHZ		0xC		// 12
 #define		I2C_ADDRESS_MAX				0x7F	// 127
@@ -26,7 +29,7 @@
 #define		I2C_ADDR_MPU6050_2					0x69
 
 #define		MPU6050_REG_PWR_MGMT_1				0x6B
-#define		MPU6050_REG_ID						0x75
+#define		MPU6050_REG_WHO_AM_I				0x75
 #define		MPU6050_REG_GYRO_CONFIG				0x1B
 #define		MPU6050_REG_ACCEL_CONFIG			0x1C
 #define		MPU6050_REG_CONFIG					0x1A
@@ -36,7 +39,7 @@
 #define		MPU6050_REG_CONFIG_LOW_PASS_43HZ			0x03
 #define		MPU6050_REG_BALANCE_VALUE			0x3F
 #define		MPU6050_REG_RAW_GYRO_VALUES			0x43
-
+#define		MPU6050_ACCEL_4G_LSB				8192
 
 #define		I2C_XMIT_END_SUCCESS		0x0
 #define		I2C_XMIT_END_TOO_LONG		0x1
@@ -46,6 +49,7 @@
 
 #define		USART_BAUD_9600				9600
 
+#define		AVERAGE_ELEMENT_COUNT		500
 
 #define		ACC_CALIBRATION_VALUE		1000			// Enter the accelerometer calibration value
 
@@ -55,7 +59,8 @@
 #define		TURNING_SPEED				30.0			// Turning speed (30.0)
 #define		MAX_TARGET_SPEED			150.0			// Max target speed (100.0)
 
-
+#define		DEGREES_PER_RADIAN			57.2958
+#define		TRIVIAL_ANGLE				0.5
 
 void i2cRegisterWrite1(int iDeviceAddress, int iRegisterAddress, int iRegisterData);
 void i2cRegisterReadStart(int iDeviceAddress, int iRegisterAddress, int iNumberOfBytes);
