@@ -37,6 +37,9 @@ void setup()
 	int		iCount;
 
 
+	gyro_yaw_cal_value = 0;
+	gyro_pitch_cal_value = 0;
+	
 	Serial.begin(9600);                                                       //Start the serial port at 9600 kbps
 	Wire.begin();                                                             //Start the I2C bus as master
 	TWBR = 12;                                                                //Set the I2C clock speed to 400kHz
@@ -52,42 +55,41 @@ void setup()
 
 	// By default the MPU-6050 sleeps. So we have to wake it up.
 	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_PWR_MGMT_1, MPU6050_REG_PWR_MGMT_1_ACTIVATE_GYRO);
+	
 	// Set the full scale of the gyro to +/- 250 degrees per second
 	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_GYRO_CONFIG, MPU6050_REG_GYRO_CONFIG_250DPS_FULL_SCALE);
+	
 	// Set the full scale of the accelerometer to +/- 4g.
 	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_ACCEL_CONFIG, MPU6050_REG_ACCEL_CONFIG_4G_FULL_SCALE);
+	
 	// Set the register bits as 00000011 (Set Digital Low Pass Filter to ~43Hz)
 	i2cRegisterWrite1(I2C_ADDR_MPU6050_1, MPU6050_REG_CONFIG, MPU6050_REG_CONFIG_LOW_PASS_43HZ);
 
 	//Configure digital output port pins
-	pinMode (2, OUTPUT);
+	pinMode (2, OUTPUT);		// Pins 2 & 3 are the left stepper motor drive
 	pinMode (3, OUTPUT);
-	pinMode (4, OUTPUT);
+	pinMode (4, OUTPUT);		// Pins 4 & 5 are the right stepper motor drive
 	pinMode (5, OUTPUT);
-	pinMode (13, OUTPUT);
+	pinMode (13, OUTPUT);		// Pin 13 is the LED
 
-	// Read and sum the pitch and yaw values over some number of loops.
-	// When done, divide by number of loops to get average value.
+	// Read and sum the pitch and yaw values over some number of loops. When done, divide by number of loops to get average value.
 	for (iCount = 0; iCount < AVERAGE_ELEMENT_COUNT; iCount++) {
 		
-		// Toggle the LED every 15 loops
+		// Toggle the LED every 15 loops (flash to show calibration in progress)
 		if (iCount % 15 == 0)
 			digitalWrite(13, !digitalRead(13));
 
 		i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_RAW_GYRO_VALUES, 4);
 
 		// Get the yaw and pitch calibration values (read and combine 2 bytes each)
-		gyro_yaw_cal_value += Wire.read() << 8 | Wire.read();
-		gyro_pitch_cal_value += Wire.read() << 8 | Wire.read();
+		gyro_yaw_cal_value += Wire.read() << 8 | Wire.read();		// Gyro x-axis
+		gyro_pitch_cal_value += Wire.read() << 8 | Wire.read();		// Gyro y-axis
 
-		delayMicroseconds(3700);
+		delayMicroseconds(CAL_LOOP_DELAY);
 	}
+
 	gyro_pitch_cal_value /= AVERAGE_ELEMENT_COUNT;
 	gyro_yaw_cal_value /= AVERAGE_ELEMENT_COUNT;
-
-	// No reason to init the loop timer variable here, so commenting it out
-	//Set the loop_timer to the next end loop time
-	//loop_timer = micros() + 4000;
 }
 
 
@@ -99,13 +101,13 @@ void loop()
 {
 	byte	bStart,
 			bLowBatt,
-			received_byte;
-	
+			bCmdNunchuck;
+
 	int		iCount = 0;
 
 	int		gyro_pitch_data_raw,
 			gyro_yaw_data_raw,
-			accelerometer_data_raw;
+			iAccelRaw;
 
 	int		iMotorLeft,
 			iMotorRight;
@@ -115,7 +117,7 @@ void loop()
 	unsigned long	loop_timer = micros() + 4000;		// Used as a delay so the loop only runs every 4 ms
 
 	float	angle_gyro,
-			angle_acc,
+			fAccelAngle,
 			angle,
 			self_balance_pid_setpoint;
 
@@ -129,76 +131,82 @@ void loop()
 	float	pid_output_left,
 			pid_output_right;
 
-	
-	// If serial data available, retrieve it and reset counter
-	if (Serial.available()) {                                                   
-		received_byte = Serial.read();
-		iCount = 0;
-	}
-	
-	//The received byte will be valid for 25 program loops (~100 milliseconds), then cleared
-	if (iCount <= 25)
-		iCount++;
-	else
-		received_byte = 0x00;
 
-	// Test the battery voltage from pin A0.  The voltage at the pin will be the battery voltage minus
-	// the diode's forward drop (0.7 volts), divided by the resistor network (0.4)	A fully charged 3S pack, 11.1 volt
-	// LIPO battery is at 12.6 volts, and 9.0 volts discharged.  At pin A0, this range is 4.76 - 3.32 volts.
-	// The ADC value at A0 for this range is roughly 975 - 780.  If battery voltage is < 10.5V, turn on the LED and set the low_bat variable to 1
-	iBatteryVoltage = (analogRead(0) * 1.222) + 85;
-	if (iBatteryVoltage < 1050) {
-		digitalWrite(13, HIGH);
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	//		Test Battery	(see definition of MIN_BATTERY_A0)
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// If battery is too low, turn on the battery warning LED and set the bLowBatt flag
+	if (analogRead(0) < MIN_BATTERY_A0) {
+		digitalWrite(DPIN_LED, HIGH);
 		bLowBatt = TRUE;
 	}
 
+	// If serial data available, retrieve it and reset counter.  Otherwise, keep the last received byte valid for 25 program loops (~100 ms), then clear it.
+	if (Serial.available()) {
+		bCmdNunchuck = Serial.read();
+		iCount = 0;
+		 
+	} else if (iCount < 25)
+		iCount++;
+	else
+		bCmdNunchuck = 0x00;
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		Angle calculations
+	//		Accelerometer Angle Calculations
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	// Read the z-axis accelerometer
 	i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_BALANCE_VALUE, 2);
 
-	accelerometer_data_raw = Wire.read() << 8 | Wire.read();					//Combine the two bytes to make one integer
-	accelerometer_data_raw += ACC_CALIBRATION_VALUE;							//Add the accelerometer calibration value
+	iAccelRaw = Wire.read() << 8 | Wire.read();					// Combine the two bytes to make one integer
+	iAccelRaw += ACC_BALANCE_VALUE;								// Add the accelerometer calibration value
 	
 	// Ensure the data value is between +/-8192, so asin function gets argument between +/-1
 	// Calculate the current angle, in degrees, according to the accelerometer
-	accelerometer_data_raw = max(min(MPU6050_ACCEL_4G_LSB, accelerometer_data_raw), -MPU6050_ACCEL_4G_LSB);
-	angle_acc = asin((float)accelerometer_data_raw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;
+	iAccelRaw = max(min(MPU6050_ACCEL_4G_LSB, iAccelRaw), -MPU6050_ACCEL_4G_LSB);
+	fAccelAngle = asin((float)iAccelRaw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;
 
-	if ((bStart == FALSE) && (angle_acc > -TRIVIAL_ANGLE) && (angle_acc < TRIVIAL_ANGLE)) {				//If the accelerometer angle is almost 0
-		angle_gyro = angle_acc;													//Load the accelerometer angle in the angle_gyro variable
+	if ((bStart == FALSE) && (fAccelAngle > -TRIVIAL_ANGLE) && (fAccelAngle < TRIVIAL_ANGLE)) {				//If the accelerometer angle is almost 0
+		angle_gyro = fAccelAngle;													//Load the accelerometer angle in the angle_gyro variable
 		bStart = TRUE;																//Set the start variable to start the PID controller
 	}
 
 	i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_RAW_GYRO_VALUES, 4);
 	
 	gyro_yaw_data_raw = Wire.read() << 8 | Wire.read();							//Combine the two bytes to make one integer
-	gyro_pitch_data_raw = Wire.read() << 8 | Wire.read();						//Combine the two bytes to make one integer
 
+	gyro_pitch_data_raw = Wire.read() << 8 | Wire.read();						//Combine the two bytes to make one integer
 	gyro_pitch_data_raw -= gyro_pitch_cal_value;								//Add the gyro calibration value
+
 	angle_gyro += gyro_pitch_data_raw * 0.000031;								//Calculate the traveled during this loop angle and add this to the angle_gyro variable
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		MPU-6050 offset compensation
+	//		MPU-6050 Offset Compensation
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Not every gyro is mounted 100% level with the axis of the robot.  As a result the robot will not rotate at the exact same spot and
 	// start to make larger and larger circles.  To compensate for this behavior a VERY SMALL compensation angle is needed when the robot
 	// is rotating.  Try 0.0000003 or -0.0000003 first to see if there is any improvement.
 
 	gyro_yaw_data_raw -= gyro_yaw_cal_value;									//Add the gyro calibration value
+
 	// angle_gyro -= gyro_yaw_data_raw * 0.0000003;		// Uncomment to activate rotation compensation
-	angle_gyro = angle_gyro * 0.9996 + angle_acc * 0.0004;						// Correct the drift of the gyro angle with the accelerometer angle
+
+	angle_gyro = angle_gyro * 0.9996 + fAccelAngle * 0.0004;						// Correct the drift of the gyro angle with the accelerometer angle
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		PID controller calculations
+	//		PID Calculations
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// The balancing robot is angle driven.  First the difference between the desired angel (setpoint) and actual angle (process value)
 	// is calculated.  The self_balance_pid_setpoint variable is automatically changed to make sure that the robot stays balanced all the
 	// time.  The (pid_setpoint - pid_output * 0.015) part functions as a brake function.
-	pid_error_temp = angle_gyro - self_balance_pid_setpoint - pid_setpoint;
-	if (pid_output > 10 || pid_output < -10)pid_error_temp += pid_output * 0.015;
 
-	pid_i_mem += PID_I_GAIN * pid_error_temp;                                 //Calculate the I-controller value and add it to the pid_i_mem variable
+	pid_error_temp = angle_gyro - self_balance_pid_setpoint - pid_setpoint;
+
+	if (pid_output > 10 || pid_output < -10)
+		pid_error_temp += pid_output * 0.015;
+
+	pid_i_mem += PID_I_GAIN * pid_error_temp;                  //Calculate the I-controller value and add it to the pid_i_mem variable
+
 	if (pid_i_mem > 400)
 		pid_i_mem = 400;                                       //Limit the I-controller to the maximum controller output
 	else if (pid_i_mem < -400)
@@ -206,12 +214,16 @@ void loop()
 
 	//Calculate the PID output value
 	pid_output = PID_P_GAIN * pid_error_temp + pid_i_mem + PID_D_GAIN * (pid_error_temp - pid_last_d_error);
-	if (pid_output > 400)pid_output = 400;                                     //Limit the PI-controller to the maximum controller output
-	else if (pid_output < -400)pid_output = -400;
+
+	if (pid_output > 400)
+		pid_output = 400;                                     //Limit the PI-controller to the maximum controller output
+	else if (pid_output < -400)
+		pid_output = -400;
 
 	pid_last_d_error = pid_error_temp;                                        //Store the error for the next loop
 
-	if (pid_output < 5 && pid_output > -5)pid_output = 0;                      //Create a dead-band to stop the motors when the robot is balanced
+	if (pid_output < 5 && pid_output > -5)
+		pid_output = 0;                      //Create a dead-band to stop the motors when the robot is balanced
 
 	if (angle_gyro > 30 || angle_gyro < -30 || bStart == 0 || bLowBatt == 1) {    //If the robot tips over or the start variable is zero or the battery is empty
 		pid_output = 0;                                                         //Set the PID controller output to 0 so the motors stop moving
@@ -221,43 +233,50 @@ void loop()
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		Control calculations
+	//		Nunchuck Control Calculations
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	pid_output_left = pid_output;                                             //Copy the controller output to the pid_output_left variable for the left motor
-	pid_output_right = pid_output;                                            //Copy the controller output to the pid_output_right variable for the right motor
+	pid_output_left = pid_output;						// Copy the controller output to the pid_output_left variable for the left motor
+	pid_output_right = pid_output;						// Copy the controller output to the pid_output_right variable for the right motor
 
-	if (received_byte & B00000001) {                                            //If the first bit of the receive byte is set change the left and right variable to turn the robot to the left
-		pid_output_left += TURNING_SPEED;                                       //Increase the left motor speed
-		pid_output_right -= TURNING_SPEED;                                      //Decrease the right motor speed
-	}
-	if (received_byte & B00000010) {                                            //If the second bit of the receive byte is set change the left and right variable to turn the robot to the right
-		pid_output_left -= TURNING_SPEED;                                       //Decrease the left motor speed
-		pid_output_right += TURNING_SPEED;                                      //Increase the right motor speed
+	if (bCmdNunchuck & BIT_1) {						// Bit 1 set: Turn left
+		pid_output_left -= TURNING_SPEED;				// Decrease the left motor speed
+		pid_output_right += TURNING_SPEED;				// Increase the right motor speed
 	}
 
-	if (received_byte & B00000100) {                                            //If the third bit of the receive byte is set change the left and right variable to turn the robot to the right
+	if (bCmdNunchuck & BIT_2) {						// Bit 2 set: Turn right
+		pid_output_left += TURNING_SPEED;				// Increase the left motor speed
+		pid_output_right -= TURNING_SPEED;				// Decrease the right motor speed
+	}
+
+	if (bCmdNunchuck & BIT_3) {						// Bit 3 set: Move forward (slowly change the setpoint angle so the robot starts leaning forward)
 		if (pid_setpoint > -2.5)
-			pid_setpoint -= 0.05;                            //Slowly change the setpoint angle so the robot starts leaning forewards
-		if (pid_output > MAX_TARGET_SPEED * -1)
-			pid_setpoint -= 0.005;            //Slowly change the setpoint angle so the robot starts leaning forewards
-	}
-	if (received_byte & B00001000) {                                            //If the forth bit of the receive byte is set change the left and right variable to turn the robot to the right
-		if (pid_setpoint < 2.5)
-			pid_setpoint += 0.05;                             //Slowly change the setpoint angle so the robot starts leaning backwards
-		if (pid_output < MAX_TARGET_SPEED)
-			pid_setpoint += 0.005;                 //Slowly change the setpoint angle so the robot starts leaning backwards
+			pid_setpoint -= 0.05;
+		if (pid_output > -MAX_TARGET_SPEED)
+			pid_setpoint -= 0.005;
 	}
 
-	if (!(received_byte & B00001100)) {                                         //Slowly reduce the setpoint to zero if no foreward or backward command is given
-		if (pid_setpoint > 0.5)pid_setpoint -= 0.05;                              //If the PID setpoint is larger then 0.5 reduce the setpoint with 0.05 every loop
-		else if (pid_setpoint < -0.5)pid_setpoint += 0.05;                        //If the PID setpoint is smaller then -0.5 increase the setpoint with 0.05 every loop
-		else pid_setpoint = 0;                                                  //If the PID setpoint is smaller then 0.5 or larger then -0.5 set the setpoint to 0
+	if (bCmdNunchuck & BIT_4) {						// Bit 4 set: Move backward (lowly change the setpoint angle so the robot starts leaning backward)
+		if (pid_setpoint < 2.5)
+			pid_setpoint += 0.05;
+		if (pid_output < MAX_TARGET_SPEED)
+			pid_setpoint += 0.005;
+	}
+
+	if (!(bCmdNunchuck & B00001100)) {						//Slowly reduce the setpoint to zero if no foreward or backward command is given
+		if (pid_setpoint > 0.5)
+			pid_setpoint -= 0.05;				//If the PID setpoint is larger then 0.5 reduce the setpoint with 0.05 every loop
+		else if (pid_setpoint < -0.5)
+			pid_setpoint += 0.05;			//If the PID setpoint is smaller then -0.5 increase the setpoint with 0.05 every loop
+		else
+			pid_setpoint = 0;								//If the PID setpoint is smaller then 0.5 or larger then -0.5 set the setpoint to 0
 	}
 
 	//The self balancing point is adjusted when there is not forward or backwards movement from the transmitter. This way the robot will always find it's balancing point
-	if (pid_setpoint == 0) {                                                    //If the setpoint is zero degrees
-		if (pid_output < 0)self_balance_pid_setpoint += 0.0015;                  //Increase the self_balance_pid_setpoint if the robot is still moving forewards
-		if (pid_output > 0)self_balance_pid_setpoint -= 0.0015;                  //Decrease the self_balance_pid_setpoint if the robot is still moving backwards
+	if (pid_setpoint == 0) {						//If the setpoint is zero degrees
+		if (pid_output < 0)
+			self_balance_pid_setpoint += 0.0015;						//Increase the self_balance_pid_setpoint if the robot is still moving forewards
+		if (pid_output > 0)
+			self_balance_pid_setpoint -= 0.0015;						//Decrease the self_balance_pid_setpoint if the robot is still moving backwards
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

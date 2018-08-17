@@ -23,6 +23,15 @@ Program HWTest size: 5,642 bytes (used 17% of a 32,256 byte maximum) (5.62 secs)
 Minimum Memory Usage: 1010 bytes (49% of a 2048 byte maximum)
 
 
+** REMOTE
+// First build with globals removed 
+Program Remote size: 3,838 bytes (used 12% of a 30,720 byte maximum) (4.38 secs)
+Minimum Memory Usage: 484 bytes (24% of a 2048 byte maximum)
+ 
+
+
+
+
 ** ROBOT
 // First build with defines in place
 Program Robot size: 8,884 bytes (used 28% of a 32,256 byte maximum) (1.85 secs)

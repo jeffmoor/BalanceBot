@@ -8,6 +8,22 @@
 #define		FALSE						0
 #define		TRUE						1
 
+// Battery monitor values
+// R2(22K) and R3(36K) form a 0.38 divider, decreasing the fully charged battery voltage from 12.6V (fully charged 3S, 11.1V pack)
+// to ~4.78V.At 4.9mV / unit, this translates to a reading of 975 on analog pin A0.To prevent runing the bot at too low a battery
+// voltage, and possibly damaging the pack, we shut down if the pack voltage falls below 10.5V, or roughly 4V out of the divider,
+// or a reading of less than 813 on pin A0.
+#define		MIN_BATTERY_A0				813
+#define		DPIN_LED					13
+
+// Bits
+#define		BIT_1						B00000001
+#define		BIT_2						B00000010
+#define		BIT_3						B00000100
+#define		BIT_4						B00001000
+
+#define		CAL_LOOP_DELAY				3700
+
 
 #define		I2C_CLOCK_FREQ_400KHZ		0xC		// 12
 #define		I2C_ADDRESS_MAX				0x7F	// 127
@@ -25,6 +41,9 @@
 
 #define		NUNCHUCK_REG_XY_VALUES				0x00
 
+#define		NUNCHUCK_LOW_TRIGGER				88
+#define		NUNCHUCK_HIGH_TRIGGER				168
+
 #define		I2C_ADDR_MPU6050_1					0x68
 #define		I2C_ADDR_MPU6050_2					0x69
 
@@ -41,17 +60,17 @@
 #define		MPU6050_REG_RAW_GYRO_VALUES			0x43
 #define		MPU6050_ACCEL_4G_LSB				8192
 
-#define		I2C_XMIT_END_SUCCESS		0x0
-#define		I2C_XMIT_END_TOO_LONG		0x1
-#define		I2C_XMIT_END_ADDR_NACK		0x2
-#define		I2C_XMIT_END_DATA_NACK		0x3
-#define		I2C_XMIT_END_OTHER_ERROR	0x4
+#define		I2C_XMIT_END_SUCCESS				0x0
+#define		I2C_XMIT_END_TOO_LONG				0x1
+#define		I2C_XMIT_END_ADDR_NACK				0x2
+#define		I2C_XMIT_END_DATA_NACK				0x3
+#define		I2C_XMIT_END_OTHER_ERROR			0x4
 
 #define		USART_BAUD_9600				9600
 
 #define		AVERAGE_ELEMENT_COUNT		500
 
-#define		ACC_CALIBRATION_VALUE		1000			// Enter the accelerometer calibration value
+#define		ACC_BALANCE_VALUE			1000			// Enter the accelerometer calibration value
 
 #define		PID_P_GAIN					15.0            // Gain setting for the P-controller (15.0)
 #define		PID_I_GAIN					1.5				// Gain setting for the I-controller (1.5)

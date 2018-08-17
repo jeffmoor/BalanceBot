@@ -31,7 +31,7 @@ int left_motor, throttle_left_motor, throttle_counter_left_motor, throttle_left_
 int right_motor, throttle_right_motor, throttle_counter_right_motor, throttle_right_motor_memory;
 int battery_voltage;
 
-int gyro_pitch_data_raw, gyro_yaw_data_raw, accelerometer_data_raw;
+int gyro_pitch_data_raw, gyro_yaw_data_raw, iAccelRaw;
 
 long gyro_yaw_calibration_value, gyro_pitch_calibration_value;
 
@@ -141,13 +141,13 @@ void loop(){
   Wire.write(0x3F);                                                         //Start reading at register 3F (Accel. Z_Out)
   Wire.endTransmission();                                                   //End the transmission
   Wire.requestFrom(gyro_address, 2);                                        //Request 2 bytes from the gyro
-  accelerometer_data_raw = Wire.read()<<8|Wire.read();                      //Combine the two bytes to make one integer
-  accelerometer_data_raw += acc_calibration_value;                          //Add the accelerometer calibration value
+  iAccelRaw = Wire.read()<<8|Wire.read();                      //Combine the two bytes to make one integer
+  iAccelRaw += acc_calibration_value;                          //Add the accelerometer calibration value
 
 	// Ensure the data value is between +/-8192, so asin function gets argument between +/-1
 	// Calculate the current angle, in degrees, according to the accelerometer
-	accelerometer_data_raw = max(min(MPU6050_ACCEL_4G_LSB, accelerometer_data_raw), -MPU6050_ACCEL_4G_LSB)
-	angle_acc = asin((float)accelerometer_data_raw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;           
+	iAccelRaw = max(min(MPU6050_ACCEL_4G_LSB, iAccelRaw), -MPU6050_ACCEL_4G_LSB)
+	angle_acc = asin((float)iAccelRaw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;           
 
   if(start == 0 && angle_acc > -0.5 && angle_acc < 0.5){                     //If the accelerometer angle is almost 0
     angle_gyro = angle_acc;                                                 //Load the accelerometer angle in the angle_gyro variable
