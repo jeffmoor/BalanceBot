@@ -49,7 +49,7 @@ Minimum Memory Usage: 473 bytes (23% of a 2048 byte maximum)
 Program Robot size: 8,056 bytes (used 25% of a 32,256 byte maximum) (9.56 secs)
 Minimum Memory Usage: 453 bytes (22% of a 2048 byte maximum)
 
-// Moved loop_timer inside Loop()
+// Moved gulLoopTimer inside Loop()
 Program Robot size: 8,024 bytes (used 25% of a 32,256 byte maximum) (1.22 secs)
 Minimum Memory Usage: 448 bytes (22% of a 2048 byte maximum)
 
@@ -69,7 +69,7 @@ Minimum Memory Usage: 426 bytes (21% of a 2048 byte maximum)
 Program Robot size: 7,700 bytes (used 24% of a 32,256 byte maximum) (4.77 secs)
 Minimum Memory Usage: 424 bytes (21% of a 2048 byte maximum)
 
-// Moved bStart and bLowBatt into loop function
+// Moved bActive and bLowBatt into loop function
 Program Robot size: 7,544 bytes (used 23% of a 32,256 byte maximum) (2.59 secs)
 Minimum Memory Usage: 540 bytes (26% of a 2048 byte maximum)
 

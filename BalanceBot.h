@@ -8,12 +8,18 @@
 #define		FALSE						0
 #define		TRUE						1
 
+// This sets the number of milliseconds per loop, and hence, the sample/refresh rate of the angle calculations
+#define		LOOP_TIME_MS				4000
+
 // Battery monitor values
-// R2(22K) and R3(36K) form a 0.38 divider, decreasing the fully charged battery voltage from 12.6V (fully charged 3S, 11.1V pack)
-// to ~4.78V.At 4.9mV / unit, this translates to a reading of 975 on analog pin A0.To prevent runing the bot at too low a battery
-// voltage, and possibly damaging the pack, we shut down if the pack voltage falls below 10.5V, or roughly 4V out of the divider,
-// or a reading of less than 813 on pin A0.
-#define		MIN_BATTERY_A0				813
+// A fully charged 3S, 11.1V battery pack will measure roughly 12.6V.  The protection diode drops (conservatively) 0.8V, leaving
+// 11.8V to be monitored.  R2(22K) and R3(33K) form a 0.40 divider, applying 4.72v to pin A0, at full charge.   .At 4.9mV / unit,
+// this translates to a reading of 963 from the ADC on pin A0.  To prevent runing the bot at too low a battery voltage, and possibly
+// damaging the pack, we shut down if the pack voltage falls below 10.5V, or roughly 4.2V out of the divider, or a reading of
+// less than 858 on the ADC on pin A0. The NOT_CONNECTED value is used to keep the low battery warning from coming on if there is
+// no battery at all, like when the Arduino is connected to the computer.
+#define		BATTERY_MIN_A0				858
+#define		BATTERY_MIN_CONNECTED		572
 #define		DPIN_LED					13
 
 // Bits

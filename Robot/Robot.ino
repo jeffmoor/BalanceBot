@@ -28,6 +28,8 @@ volatile static int		iMotorLeftThrottle,
 static long				gyro_yaw_cal_value,
 						gyro_pitch_cal_value;
 
+static unsigned long	gulLoopTimer;
+
 
 //
 //		Setup Function
@@ -90,6 +92,8 @@ void setup()
 
 	gyro_pitch_cal_value /= AVERAGE_ELEMENT_COUNT;
 	gyro_yaw_cal_value /= AVERAGE_ELEMENT_COUNT;
+
+	gulLoopTimer = micros() + LOOP_TIME_MS;		// Used as a delay so the loop only runs every 4 ms (250 Hz sample/refresh rate)
 }
 
 
@@ -99,14 +103,14 @@ void setup()
 //
 void loop()
 {
-	byte	bStart,
+	byte	bActive,
 			bLowBatt,
 			bCmdNunchuck;
 
 	int		iCount = 0;
 
-	int		gyro_pitch_data_raw,
-			gyro_yaw_data_raw,
+	int		fGyroPitchRaw,
+			fGyroYawRaw,
 			iAccelRaw;
 
 	int		iMotorLeft,
@@ -114,9 +118,7 @@ void loop()
 
 	int		iBatteryVoltage;
 
-	unsigned long	loop_timer = micros() + 4000;		// Used as a delay so the loop only runs every 4 ms
-
-	float	angle_gyro,
+	float	fGyroAngle,
 			fAccelAngle,
 			angle,
 			self_balance_pid_setpoint;
@@ -136,12 +138,14 @@ void loop()
 	//		Test Battery	(see definition of MIN_BATTERY_A0)
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// If battery is too low, turn on the battery warning LED and set the bLowBatt flag
-	if (analogRead(0) < MIN_BATTERY_A0) {
+	iBatteryVoltage = analogRead(0);
+	if ((iBatteryVoltage < BATTERY_MIN_A0) && (iBatteryVoltage > BATTERY_MIN_CONNECTED)) {
 		digitalWrite(DPIN_LED, HIGH);
 		bLowBatt = TRUE;
 	}
 
-	// If serial data available, retrieve it and reset counter.  Otherwise, keep the last received byte valid for 25 program loops (~100 ms), then clear it.
+	// If serial data available from the nunchuck, retrieve it and reset counter.  Since the program loop time is ~4ms, keeping the
+	// last data around for 25 loops will be ~100ms.  It is then cleared.  This aids in keeping the robot's movement smooth.
 	if (Serial.available()) {
 		bCmdNunchuck = Serial.read();
 		iCount = 0;
@@ -152,7 +156,7 @@ void loop()
 		bCmdNunchuck = 0x00;
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		Accelerometer Angle Calculations
+	//		Angle Calculations
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	// Read the z-axis accelerometer
@@ -166,19 +170,23 @@ void loop()
 	iAccelRaw = max(min(MPU6050_ACCEL_4G_LSB, iAccelRaw), -MPU6050_ACCEL_4G_LSB);
 	fAccelAngle = asin((float)iAccelRaw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;
 
-	if ((bStart == FALSE) && (fAccelAngle > -TRIVIAL_ANGLE) && (fAccelAngle < TRIVIAL_ANGLE)) {				//If the accelerometer angle is almost 0
-		angle_gyro = fAccelAngle;													//Load the accelerometer angle in the angle_gyro variable
-		bStart = TRUE;																//Set the start variable to start the PID controller
+	// If the accelerometer angle is almost 0, set the gyro angle to this small value, and set the robot to active
+	if ((bActive == FALSE) && (fAccelAngle > -TRIVIAL_ANGLE) && (fAccelAngle < TRIVIAL_ANGLE)) {
+		fGyroAngle = fAccelAngle;													//Load the accelerometer angle in the fGyroAngle variable
+		bActive = TRUE;																//Set the start variable to start the PID controller
 	}
 
+	// Read the yaw and pitch angles from the gyro
 	i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_RAW_GYRO_VALUES, 4);
+	fGyroYawRaw = Wire.read() << 8 | Wire.read();
+	fGyroPitchRaw = Wire.read() << 8 | Wire.read();
 	
-	gyro_yaw_data_raw = Wire.read() << 8 | Wire.read();							//Combine the two bytes to make one integer
+	fGyroPitchRaw -= gyro_pitch_cal_value;								// Subtract the gyro pitch calibration value
 
-	gyro_pitch_data_raw = Wire.read() << 8 | Wire.read();						//Combine the two bytes to make one integer
-	gyro_pitch_data_raw -= gyro_pitch_cal_value;								//Add the gyro calibration value
-
-	angle_gyro += gyro_pitch_data_raw * 0.000031;								//Calculate the traveled during this loop angle and add this to the angle_gyro variable
+	// Because the main loop is running at 250Hz, we know the raw gyro value is the approximate movement over the last 4ms.  As set, if the gyro
+	// were moving at 1 deg/s, the gyro would output 131, but we are measuring per 4ms, so we multiply by 0.000031 (=1/(250*131)) to give us the
+	// traveled angle in the last 4ms.  We then add this to the last position to get our new position.
+	fGyroAngle += fGyroPitchRaw * 0.000031;								
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//		MPU-6050 Offset Compensation
@@ -187,11 +195,11 @@ void loop()
 	// start to make larger and larger circles.  To compensate for this behavior a VERY SMALL compensation angle is needed when the robot
 	// is rotating.  Try 0.0000003 or -0.0000003 first to see if there is any improvement.
 
-	gyro_yaw_data_raw -= gyro_yaw_cal_value;									//Add the gyro calibration value
+	fGyroYawRaw -= gyro_yaw_cal_value;									//Add the gyro calibration value
 
-	// angle_gyro -= gyro_yaw_data_raw * 0.0000003;		// Uncomment to activate rotation compensation
+	// fGyroAngle -= fGyroYawRaw * 0.0000003;		// Uncomment to activate rotation compensation
 
-	angle_gyro = angle_gyro * 0.9996 + fAccelAngle * 0.0004;						// Correct the drift of the gyro angle with the accelerometer angle
+	fGyroAngle = fGyroAngle * 0.9996 + fAccelAngle * 0.0004;						// Correct the drift of the gyro angle with the accelerometer angle
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//		PID Calculations
@@ -200,7 +208,7 @@ void loop()
 	// is calculated.  The self_balance_pid_setpoint variable is automatically changed to make sure that the robot stays balanced all the
 	// time.  The (pid_setpoint - pid_output * 0.015) part functions as a brake function.
 
-	pid_error_temp = angle_gyro - self_balance_pid_setpoint - pid_setpoint;
+	pid_error_temp = fGyroAngle - self_balance_pid_setpoint - pid_setpoint;
 
 	if (pid_output > 10 || pid_output < -10)
 		pid_error_temp += pid_output * 0.015;
@@ -225,10 +233,10 @@ void loop()
 	if (pid_output < 5 && pid_output > -5)
 		pid_output = 0;                      //Create a dead-band to stop the motors when the robot is balanced
 
-	if (angle_gyro > 30 || angle_gyro < -30 || bStart == 0 || bLowBatt == 1) {    //If the robot tips over or the start variable is zero or the battery is empty
+	if (fGyroAngle > 30 || fGyroAngle < -30 || bActive == 0 || bLowBatt == 1) {    //If the robot tips over or the start variable is zero or the battery is empty
 		pid_output = 0;                                                         //Set the PID controller output to 0 so the motors stop moving
 		pid_i_mem = 0;                                                          //Reset the I-controller memory
-		bStart = 0;                                                              //Set the start variable to 0
+		bActive = 0;                                                              //Set the start variable to 0
 		self_balance_pid_setpoint = 0;                                          //Reset the self_balance_pid_setpoint variable
 	}
 
@@ -311,12 +319,12 @@ void loop()
 	iMotorRightThrottle = iMotorRight;
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//		Loop time timer
+	//		Loop timer
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//The angle calculations are tuned for a loop time of 4 milliseconds. To make sure every loop is exactly 4 milliseconds a wait loop
-	//is created by setting the loop_timer variable to +4000 microseconds every loop.
-	while (loop_timer > micros());
-	loop_timer += 4000;
+	// The angle calculations are tuned for a loop time of 4 milliseconds (250 Hz). To make sure every loop is
+	// exactly 4 milliseconds a wait loop is entered to delay until 4 ms has passed since the end of the last loop.
+	while (gulLoopTimer > micros());
+	gulLoopTimer += LOOP_TIME_MS;
 }
 
 

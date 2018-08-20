@@ -30,8 +30,8 @@ byte start, received_byte, low_bat;
 int left_motor, throttle_left_motor, throttle_counter_left_motor, throttle_left_motor_memory;
 int right_motor, throttle_right_motor, throttle_counter_right_motor, throttle_right_motor_memory;
 int battery_voltage;
-
-int gyro_pitch_data_raw, gyro_yaw_data_raw, iAccelRaw;
+int receive_counter;
+int gyro_pitch_data_raw, gyro_yaw_data_raw, accelerometer_data_raw;
 
 long gyro_yaw_calibration_value, gyro_pitch_calibration_value;
 
@@ -45,9 +45,6 @@ float pid_output_left, pid_output_right;
 //Setup basic functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void setup(){
-
-	int receive_counter;
-
   Serial.begin(9600);                                                       //Start the serial port at 9600 kbps
   Wire.begin();                                                             //Start the I2C bus as master
   TWBR = 12;                                                                //Set the I2C clock speed to 400kHz
@@ -74,7 +71,7 @@ void setup(){
   //Set the full scale of the accelerometer to +/- 4g.
   Wire.beginTransmission(gyro_address);                                     //Start communication with the address found during search.
   Wire.write(0x1C);                                                         //We want to write to the ACCEL_CONFIG register (1A hex)
-  Wire.write(0x08);                                                         //Set the register bits as 00001000 (+/- 4g full scale range - 8192 LSB)
+  Wire.write(0x08);                                                         //Set the register bits as 00001000 (+/- 4g full scale range)
   Wire.endTransmission();                                                   //End the transmission with the gyro
   //Set some filtering to improve the raw data.
   Wire.beginTransmission(gyro_address);                                     //Start communication with the address found during search
@@ -109,10 +106,6 @@ void setup(){
 //Main program loop
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop(){
-
-	int receive_counter;
-
-
   if(Serial.available()){                                                   //If there is serial data available
     received_byte = Serial.read();                                          //Load the received serial data in the received_byte variable
     receive_counter = 0;                                                    //Reset the receive_counter variable
@@ -129,29 +122,28 @@ void loop(){
   //The variable battery_voltage holds 1050 if the battery voltage is 10.5V.
   battery_voltage = (analogRead(0) * 1.222) + 85;
   
-  if(battery_voltage < 1050 && battery_voltage > 800){                      //If battery voltage is below 10.5V and higher than 8.0V
+  if(battery_voltage < 1050 && battery_voltage > 800){                      //If batteryvoltage is below 10.5V and higher than 8.0V
     digitalWrite(13, HIGH);                                                 //Turn on the led if battery voltage is to low
-    low_bat = TRUE;                                                            //Set the low_bat variable to 1
+    low_bat = 1;                                                            //Set the low_bat variable to 1
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Angle calculations
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   Wire.beginTransmission(gyro_address);                                     //Start communication with the gyro
-  Wire.write(0x3F);                                                         //Start reading at register 3F (Accel. Z_Out)
+  Wire.write(0x3F);                                                         //Start reading at register 3F
   Wire.endTransmission();                                                   //End the transmission
   Wire.requestFrom(gyro_address, 2);                                        //Request 2 bytes from the gyro
-  iAccelRaw = Wire.read()<<8|Wire.read();                      //Combine the two bytes to make one integer
-  iAccelRaw += acc_calibration_value;                          //Add the accelerometer calibration value
+  accelerometer_data_raw = Wire.read()<<8|Wire.read();                      //Combine the two bytes to make one integer
+  accelerometer_data_raw += acc_calibration_value;                          //Add the accelerometer calibration value
+  if(accelerometer_data_raw > 8200)accelerometer_data_raw = 8200;           //Prevent division by zero by limiting the acc data to +/-8200;
+  if(accelerometer_data_raw < -8200)accelerometer_data_raw = -8200;         //Prevent division by zero by limiting the acc data to +/-8200;
 
-	// Ensure the data value is between +/-8192, so asin function gets argument between +/-1
-	// Calculate the current angle, in degrees, according to the accelerometer
-	iAccelRaw = max(min(MPU6050_ACCEL_4G_LSB, iAccelRaw), -MPU6050_ACCEL_4G_LSB)
-	angle_acc = asin((float)iAccelRaw / MPU6050_ACCEL_4G_LSB) * DEGREES_PER_RADIAN;           
+  angle_acc = asin((float)accelerometer_data_raw/8200.0)* 57.296;           //Calculate the current angle according to the accelerometer
 
-  if(start == 0 && angle_acc > -0.5 && angle_acc < 0.5){                     //If the accelerometer angle is almost 0
+  if(start == 0 && angle_acc > -0.5&& angle_acc < 0.5){                     //If the accelerometer angle is almost 0
     angle_gyro = angle_acc;                                                 //Load the accelerometer angle in the angle_gyro variable
-    start = TRUE;                                                              //Set the start variable to start the PID controller
+    start = 1;                                                              //Set the start variable to start the PID controller
   }
   
   Wire.beginTransmission(gyro_address);                                     //Start communication with the gyro
@@ -202,7 +194,7 @@ void loop(){
   if(angle_gyro > 30 || angle_gyro < -30 || start == 0 || low_bat == 1){    //If the robot tips over or the start variable is zero or the battery is empty
     pid_output = 0;                                                         //Set the PID controller output to 0 so the motors stop moving
     pid_i_mem = 0;                                                          //Reset the I-controller memory
-    start = FALSE;                                                              //Set the start variable to 0
+    start = 0;                                                              //Set the start variable to 0
     self_balance_pid_setpoint = 0;                                          //Reset the self_balance_pid_setpoint variable
   }
 
