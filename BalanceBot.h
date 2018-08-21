@@ -74,7 +74,7 @@
 
 #define		USART_BAUD_9600				9600
 
-#define		AVERAGE_ELEMENT_COUNT		500
+#define		CAL_AVERAGE_COUNT			500
 
 #define		ACC_BALANCE_VALUE			1000			// Enter the accelerometer calibration value
 

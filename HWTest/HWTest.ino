@@ -120,7 +120,7 @@ void loop()
 
 		i2cRegisterReadStart(I2C_ADDR_MPU6050_1, MPU6050_REG_BALANCE_VALUE, 2);
 
-		Serial.println((Wire.read() << 8 | Wire.read())*-1);
+		Serial.println(Wire.read() << 8 | Wire.read());			// Display the positive value and subtract it later
 		delay(20);
 		Serial.println("Printing raw gyro values");
 		for (iAddrI2C = 0; iAddrI2C < 20; iAddrI2C++) {
