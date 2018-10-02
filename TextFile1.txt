@@ -1,0 +1,14 @@
+Proposed Additions
+
+
+2-line LCD display support
+
+Hardware testing
+
+Auto calibration on switch press	
+
+Telemetry Reporting
+
+
+
+
