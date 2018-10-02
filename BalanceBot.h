@@ -30,7 +30,6 @@
 
 #define		CAL_LOOP_DELAY				3700
 
-
 #define		I2C_CLOCK_FREQ_400KHZ		0xC		// 12
 #define		I2C_ADDRESS_MAX				0x7F	// 127
 

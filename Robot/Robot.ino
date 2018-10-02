@@ -59,8 +59,8 @@ void setup()
 	Wire.begin();                                                             //Start the I2C bus as master
 	TWBR = 12;                                                                //Set the I2C clock speed to 400kHz
 
-																			  // To create a variable pulse for controlling the stepper motors, use 8-bit Counter 2 to execute
-																			  // an interrupt procedure (TIMER2_COMPA_vect) every 20us.
+	// To create a variable pulse for controlling the stepper motors, use 8-bit Counter 2 to execute
+	// an interrupt procedure (TIMER2_COMPA_vect) every 20us.
 	TCCR2A = 0;						// Clear control registers A and B                                                               
 	TCCR2B = 0;
 	TIMSK2 |= (1 << OCIE2A);		// Set interrupt mask reg to enable the interrupt when compare matches                                                  
@@ -240,28 +240,28 @@ void loop()
 	gfPidOutputLeft = gfPidOutput;						// Copy the controller output to the gfPidOutputLeft variable for the left motor
 	gfPidOutputRight = gfPidOutput;						// Copy the controller output to the gfPidOutputRight variable for the right motor
 
-	if (gbCmdNunchuck & BIT_1) {						// Bit 1 set: Turn right
-		gfPidOutputLeft += TURNING_SPEED;				// Increase the left motor speed
-		gfPidOutputRight -= TURNING_SPEED;				// Decrease the right motor speed
-	}
-
-	if (gbCmdNunchuck & BIT_2) {						// Bit 2 set: Turn left
+	if (gbCmdNunchuck & BIT_1) {						// Bit 1 set: Turn left
 		gfPidOutputLeft -= TURNING_SPEED;				// Decrease the left motor speed
 		gfPidOutputRight += TURNING_SPEED;				// Increase the right motor speed
 	}
 
-	if (gbCmdNunchuck & BIT_3) {						// Bit 3 set: Move forward (slowly change the setpoint angle so the robot starts leaning forward)
-		if (gfDesiredAngle > -2.5)						// Shooting for an angle of -2.5 degrees by slowly deccrementing by 0.05 per loop.  This makes the movement more fluid.
-			gfDesiredAngle -= 0.05;
-		if (gfPidOutput > -MAX_TARGET_SPEED)				// Decrease the angle further, slowly, until the output greater than the maximum speed (shag carpet)
-			gfDesiredAngle -= 0.005;
+	if (gbCmdNunchuck & BIT_2) {						// Bit 2 set: Turn right
+		gfPidOutputLeft += TURNING_SPEED;				// Increase the left motor speed
+		gfPidOutputRight -= TURNING_SPEED;				// Decrease the right motor speed
 	}
 
-	if (gbCmdNunchuck & BIT_4) {						// Bit 4 set: Move backward (slowly change the setpoint angle so the robot starts leaning backward)
-		if (gfDesiredAngle < 2.5)
+	if (gbCmdNunchuck & BIT_3) {						// Bit 3 set: Move back. Slowly change setpoint angle so robot starts leaning backward. (more positive y angle)
+		if (gfDesiredAngle < 2.5)						// Shooting for an angle of 2.5 degrees by slowly incrementing by 0.05 per loop.  This makes the movement more fluid.
 			gfDesiredAngle += 0.05;
-		if (gfPidOutput < MAX_TARGET_SPEED)
+		if (gfPidOutput < MAX_TARGET_SPEED)				// Increase the angle further, slowly, until the output greater than the maximum speed (for shag carpet)
 			gfDesiredAngle += 0.005;
+	}
+
+	if (gbCmdNunchuck & BIT_4) {						// Bit 4 set: Move forward. Slowly change setpoint angle so robot starts leaning forward. (more negative y angle)
+		if (gfDesiredAngle > -2.5)
+			gfDesiredAngle -= 0.05;
+		if (gfPidOutput > -MAX_TARGET_SPEED)
+			gfDesiredAngle -= 0.005;
 	}
 
 	if (!(gbCmdNunchuck & B00001100)) {				// Neither bits 3 or 4: Slowly reduce the desired angle to zero

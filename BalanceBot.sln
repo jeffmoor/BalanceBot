@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{926099E5-A
 		Docs\Balancing_robot_remote.ino = Docs\Balancing_robot_remote.ino
 		Docs\nunchuk.pdf = Docs\nunchuk.pdf
 		Size Tracking.txt = Size Tracking.txt
+		Docs\Velocity Plots.ods = Docs\Velocity Plots.ods
 		Docs\yabr-frame_parts.pdf = Docs\yabr-frame_parts.pdf
 		Docs\yabr-schematic_remote.pdf = Docs\yabr-schematic_remote.pdf
 		Docs\yabr-schematic_robot.pdf = Docs\yabr-schematic_robot.pdf
